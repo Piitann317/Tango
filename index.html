@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tango - 英単語帳</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --text: #1f2937;
+    --sub: #6b7280;
+    --primary: #4f6df5;
+    --primary-dark: #3b55d9;
+    --success: #22a06b;
+    --danger: #e5484d;
+    --warning: #d97706;
+    --border: #e5e7eb;
+    --radius: 14px;
+    --shadow: 0 1px 3px rgba(16, 24, 40, .08), 0 4px 16px rgba(16, 24, 40, .06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+  header h1 .logo { font-size: 1.4rem; }
+  nav { display: flex; gap: 8px; }
+  nav button {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--sub);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: .9rem;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  nav button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+  nav button:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+  main { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px;
+    margin-bottom: 18px;
+  }
+  .card h2 { font-size: 1.05rem; margin-bottom: 14px; }
+  label { display: block; font-size: .85rem; color: var(--sub); margin: 12px 0 5px; }
+  input[type="text"], textarea {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: #fbfcfe;
+  }
+  input[type="text"]:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 109, 245, .15);
+    background: #fff;
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 20px;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--sub);
+  }
+  .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .word-input-row { display: flex; gap: 10px; }
+  .word-input-row input { flex: 1; }
+  .hint { font-size: .78rem; color: var(--sub); margin-top: 6px; }
+  .fetch-status { font-size: .85rem; margin-top: 8px; min-height: 1.2em; }
+  .fetch-status.loading { color: var(--primary); }
+  .fetch-status.error { color: var(--warning); }
+  .fetch-status.ok { color: var(--success); }
+
+  /* 単語リスト */
+  .list-toolbar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+  .list-toolbar input { flex: 1; min-width: 180px; }
+  .stats-bar { font-size: .85rem; color: var(--sub); margin-bottom: 12px; }
+  .word-item {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px 18px;
+    margin-bottom: 12px;
+  }
+  .word-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .word-item-header .word { font-size: 1.15rem; font-weight: 700; }
+  .badge {
+    font-size: .72rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .badge.new { background: #eef1fe; color: var(--primary); }
+  .badge.learning { background: #fef3e2; color: var(--warning); }
+  .badge.mastered { background: #e6f7ef; color: var(--success); }
+  .word-item-body { display: none; margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 12px; }
+  .word-item.open .word-item-body { display: block; }
+  .word-item-body p { margin-bottom: 8px; font-size: .93rem; line-height: 1.7; }
+  .word-item-body .field-label { color: var(--sub); font-size: .78rem; display: block; }
+  .word-item-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .word-item-actions button {
+    font-size: .8rem;
+    padding: 6px 14px;
+  }
+  .empty-msg { text-align: center; color: var(--sub); padding: 40px 0; line-height: 1.9; }
+
+  /* 復習モード */
+  .review-setup { text-align: center; padding: 10px 0; }
+  .review-setup p { color: var(--sub); margin-bottom: 18px; line-height: 1.8; }
+  .flashcard {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 40px 24px;
+    text-align: center;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+  }
+  .flashcard .fc-word { font-size: 2rem; font-weight: 800; letter-spacing: .02em; }
+  .flashcard .fc-question { color: var(--sub); font-size: .9rem; }
+  .flashcard .fc-meaning { font-size: 1.2rem; font-weight: 600; line-height: 1.7; }
+  .flashcard .fc-example {
+    color: var(--sub);
+    font-size: .92rem;
+    line-height: 1.7;
+    border-top: 1px dashed var(--border);
+    padding-top: 12px;
+    margin-top: 4px;
+    max-width: 480px;
+  }
+  .progress-text { text-align: center; color: var(--sub); font-size: .85rem; margin-bottom: 12px; }
+  .progress-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 999px;
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+  .progress-fill { height: 100%; background: var(--primary); border-radius: 999px; transition: width .3s; }
+  .review-actions { display: flex; gap: 12px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  .review-actions .btn { min-width: 140px; }
+  .result-summary { text-align: center; padding: 20px 0; }
+  .result-summary .big { font-size: 2.4rem; font-weight: 800; margin: 10px 0; }
+  .result-summary p { color: var(--sub); line-height: 1.8; }
+  .result-detail { margin-top: 18px; text-align: left; }
+  .result-detail li { margin: 6px 0 6px 20px; font-size: .92rem; }
+  .result-detail .ng { color: var(--danger); }
+  .result-detail .ok { color: var(--success); }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #111827;
+    color: #fff;
+    padding: 11px 22px;
+    border-radius: 999px;
+    font-size: .88rem;
+    opacity: 0;
+    transition: all .3s;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  @media (max-width: 520px) {
+    .word-input-row { flex-direction: column; }
+    .flashcard .fc-word { font-size: 1.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="logo">📖</span>Tango 単語帳</h1>
+  <nav>
+    <button id="nav-add" class="active" onclick="showView('add')">単語を追加</button>
+    <button id="nav-list" onclick="showView('list')">単語リスト</button>
+    <button id="nav-review" onclick="showView('review')">復習モード</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ===== 単語追加 ===== -->
+  <section id="view-add" class="view active">
+    <div class="card">
+      <h2>分からない単語を登録</h2>
+      <label for="input-word">英単語</label>
+      <div class="word-input-row">
+        <input type="text" id="input-word" placeholder="例: serendipity" autocomplete="off">
+        <button class="btn btn-outline" id="btn-fetch" onclick="fetchDefinition()">🔍 意味を自動取得</button>
+      </div>
+      <div class="fetch-status" id="fetch-status"></div>
+      <label for="input-meaning">意味(日本語で書き足すと覚えやすいです)</label>
+      <textarea id="input-meaning" placeholder="例: 思いがけない幸運な発見、セレンディピティ"></textarea>
+      <label for="input-example">例文</label>
+      <textarea id="input-example" placeholder="例: Finding that book was pure serendipity."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveWord()">💾 保存する</button>
+        <button class="btn btn-outline" onclick="clearForm()">クリア</button>
+      </div>
+      <p class="hint">「意味を自動取得」は英英辞書 (dictionaryapi.dev) を使用します。オフラインの場合や見つからない場合は手入力してください。Enterキーでも自動取得できます。</p>
+    </div>
+  </section>
+
+  <!-- ===== 単語リスト ===== -->
+  <section id="view-list" class="view">
+    <div class="list-toolbar">
+      <input type="text" id="search-box" placeholder="🔍 単語・意味で検索" oninput="renderList()">
+    </div>
+    <div class="stats-bar" id="stats-bar"></div>
+    <div id="word-list"></div>
+  </section>
+
+  <!-- ===== 復習モード ===== -->
+  <section id="view-review" class="view">
+    <div class="card review-setup" id="review-setup">
+      <h2>復習モード</h2>
+      <p id="review-intro"></p>
+      <div class="review-actions">
+        <button class="btn btn-primary" id="btn-start-all" onclick="startReview('all')">すべて復習</button>
+        <button class="btn btn-outline" id="btn-start-weak" onclick="startReview('weak')">苦手な単語だけ</button>
+      </div>
+    </div>
+
+    <div id="review-session" style="display:none;">
+      <div class="progress-text" id="review-progress-text"></div>
+      <div class="progress-track"><div class="progress-fill" id="review-progress-fill"></div></div>
+      <div class="flashcard" id="flashcard">
+        <div class="fc-word" id="fc-word"></div>
+        <div class="fc-question" id="fc-question">この単語の意味を思い出せますか?</div>
+        <div class="fc-meaning" id="fc-meaning" style="display:none;"></div>
+        <div class="fc-example" id="fc-example" style="display:none;"></div>
+      </div>
+      <div class="review-actions" id="review-btns-front">
+        <button class="btn btn-primary" onclick="revealAnswer()">答えを見る</button>
+      </div>
+      <div class="review-actions" id="review-btns-back" style="display:none;">
+        <button class="btn btn-success" onclick="answerCard(true)">⭕ 覚えていた</button>
+        <button class="btn btn-danger" onclick="answerCard(false)">❌ 忘れていた</button>
+      </div>
+      <div class="review-actions">
+        <button class="btn btn-outline" onclick="quitReview()">中断する</button>
+      </div>
+    </div>
+
+    <div class="card result-summary" id="review-result" style="display:none;">
+      <h2>復習おつかれさまでした 🎉</h2>
+      <div class="big" id="result-score"></div>
+      <p id="result-message"></p>
+      <ul class="result-detail" id="result-detail"></ul>
+      <div class="review-actions">
+        <button class="btn btn-primary" onclick="resetReviewView()">もう一度復習する</button>
+        <button class="btn btn-outline" onclick="showView('list')">単語リストへ</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+const STORAGE_KEY = "tango.words.v1";
+
+/* ---------- データ管理 ---------- */
+
+function loadWords() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveWords(words) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
+}
+
+let words = loadWords();
+
+/* ステータス判定: 正解2回以上で「習得済み」、1回以上で「学習中」、それ以外は「新規」 */
+function statusOf(w) {
+  if (w.correct >= 2 && w.correct > w.wrong) return "mastered";
+  if (w.correct + w.wrong > 0) return "learning";
+  return "new";
+}
+const STATUS_LABEL = { new: "新規", learning: "学習中", mastered: "習得済み" };
+
+/* ---------- ビュー切り替え ---------- */
+
+function showView(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  document.getElementById("view-" + name).classList.add("active");
+  document.getElementById("nav-" + name).classList.add("active");
+  if (name === "list") renderList();
+  if (name === "review") resetReviewView();
+}
+
+/* ---------- トースト ---------- */
+
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+/* ---------- 単語追加 ---------- */
+
+let editingId = null;
+
+async function fetchDefinition() {
+  const word = document.getElementById("input-word").value.trim();
+  const status = document.getElementById("fetch-status");
+  if (!word) {
+    status.className = "fetch-status error";
+    status.textContent = "先に英単語を入力してください。";
+    return;
+  }
+  const btn = document.getElementById("btn-fetch");
+  btn.disabled = true;
+  status.className = "fetch-status loading";
+  status.textContent = "辞書を検索中…";
+  try {
+    const res = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(word));
+    if (!res.ok) throw new Error("not found");
+    const data = await res.json();
+    const meanings = [];
+    let example = "";
+    for (const entry of data) {
+      for (const m of entry.meanings || []) {
+        for (const d of m.definitions || []) {
+          if (meanings.length < 3 && d.definition) {
+            meanings.push(`[${m.partOfSpeech}] ${d.definition}`);
+          }
+          if (!example && d.example) example = d.example;
+        }
+      }
+    }
+    if (meanings.length === 0) throw new Error("not found");
+    const meaningBox = document.getElementById("input-meaning");
+    const exampleBox = document.getElementById("input-example");
+    meaningBox.value = meanings.join("\n");
+    if (example) exampleBox.value = example;
+    status.className = "fetch-status ok";
+    status.textContent = example
+      ? "意味と例文を取得しました。日本語訳を書き足して保存しましょう。"
+      : "意味を取得しました(例文は見つかりませんでした)。";
+  } catch (e) {
+    status.className = "fetch-status error";
+    status.textContent = "辞書で見つかりませんでした。意味と例文を手入力してください。";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function saveWord() {
+  const wordEl = document.getElementById("input-word");
+  const word = wordEl.value.trim();
+  const meaning = document.getElementById("input-meaning").value.trim();
+  const example = document.getElementById("input-example").value.trim();
+
+  if (!word) { toast("英単語を入力してください"); wordEl.focus(); return; }
+  if (!meaning) { toast("意味を入力してください(自動取得も使えます)"); return; }
+
+  const dup = words.find(w => w.word.toLowerCase() === word.toLowerCase() && w.id !== editingId);
+  if (dup) { toast(`「${word}」はすでに登録されています`); return; }
+
+  if (editingId !== null) {
+    const w = words.find(w => w.id === editingId);
+    if (w) { w.word = word; w.meaning = meaning; w.example = example; }
+    toast(`「${word}」を更新しました`);
+    editingId = null;
+  } else {
+    words.push({
+      id: Date.now(),
+      word, meaning, example,
+      correct: 0,
+      wrong: 0,
+      createdAt: new Date().toISOString()
+    });
+    toast(`「${word}」を保存しました`);
+  }
+  saveWords(words);
+  clearForm();
+  wordEl.focus();
+}
+
+function clearForm() {
+  editingId = null;
+  document.getElementById("input-word").value = "";
+  document.getElementById("input-meaning").value = "";
+  document.getElementById("input-example").value = "";
+  document.getElementById("fetch-status").textContent = "";
+}
+
+document.getElementById("input-word").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); fetchDefinition(); }
+});
+
+/* ---------- 単語リスト ---------- */
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+function renderList() {
+  const listEl = document.getElementById("word-list");
+  const q = document.getElementById("search-box").value.trim().toLowerCase();
+  const filtered = words
+    .filter(w => !q || w.word.toLowerCase().includes(q) || w.meaning.toLowerCase().includes(q))
+    .sort((a, b) => b.id - a.id);
+
+  const counts = { new: 0, learning: 0, mastered: 0 };
+  words.forEach(w => counts[statusOf(w)]++);
+  document.getElementById("stats-bar").textContent =
+    `全 ${words.length} 語(新規 ${counts.new} / 学習中 ${counts.learning} / 習得済み ${counts.mastered})`;
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = `<div class="empty-msg">${
+      words.length === 0
+        ? "まだ単語が登録されていません。<br>「単語を追加」から分からない単語を登録しましょう。"
+        : "検索に一致する単語がありません。"
+    }</div>`;
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(w => {
+    const st = statusOf(w);
+    return `
+    <div class="word-item" data-id="${w.id}">
+      <div class="word-item-header" onclick="toggleItem(${w.id})">
+        <span class="word">${escapeHtml(w.word)}</span>
+        <span class="badge ${st}">${STATUS_LABEL[st]}</span>
+      </div>
+      <div class="word-item-body">
+        <p><span class="field-label">意味</span>${escapeHtml(w.meaning).replace(/\n/g, "<br>")}</p>
+        ${w.example ? `<p><span class="field-label">例文</span>${escapeHtml(w.example).replace(/\n/g, "<br>")}</p>` : ""}
+        <p><span class="field-label">復習成績</span>⭕ ${w.correct} 回 / ❌ ${w.wrong} 回</p>
+        <div class="word-item-actions">
+          <button class="btn btn-outline" onclick="editWord(${w.id})">✏️ 編集</button>
+          <button class="btn btn-outline" onclick="deleteWord(${w.id})">🗑 削除</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function toggleItem(id) {
+  const el = document.querySelector(`.word-item[data-id="${id}"]`);
+  if (el) el.classList.toggle("open");
+}
+
+function editWord(id) {
+  const w = words.find(w => w.id === id);
+  if (!w) return;
+  editingId = id;
+  document.getElementById("input-word").value = w.word;
+  document.getElementById("input-meaning").value = w.meaning;
+  document.getElementById("input-example").value = w.example || "";
+  document.getElementById("fetch-status").textContent = "";
+  showView("add");
+  toast("編集モード:内容を変更して保存してください");
+}
+
+function deleteWord(id) {
+  const w = words.find(w => w.id === id);
+  if (!w) return;
+  if (!confirm(`「${w.word}」を削除しますか?`)) return;
+  words = words.filter(x => x.id !== id);
+  saveWords(words);
+  renderList();
+  toast(`「${w.word}」を削除しました`);
+}
+
+/* ---------- 復習モード ---------- */
+
+let session = null; /* { queue: [...], index, results: [{word, ok}] } */
+
+function resetReviewView() {
+  session = null;
+  document.getElementById("review-session").style.display = "none";
+  document.getElementById("review-result").style.display = "none";
+  document.getElementById("review-setup").style.display = "";
+
+  const weakCount = words.filter(w => statusOf(w) !== "mastered").length;
+  const intro = document.getElementById("review-intro");
+  const btnAll = document.getElementById("btn-start-all");
+  const btnWeak = document.getElementById("btn-start-weak");
+  if (words.length === 0) {
+    intro.textContent = "単語が登録されていません。まず「単語を追加」から登録しましょう。";
+    btnAll.disabled = true;
+    btnWeak.disabled = true;
+  } else {
+    intro.textContent = `登録単語 ${words.length} 語(うち未習得 ${weakCount} 語)。カードの英単語を見て意味を思い出し、答え合わせをしましょう。`;
+    btnAll.disabled = false;
+    btnWeak.disabled = weakCount === 0;
+    btnWeak.textContent = `苦手な単語だけ(${weakCount})`;
+  }
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startReview(mode) {
+  const pool = mode === "weak" ? words.filter(w => statusOf(w) !== "mastered") : words;
+  if (pool.length === 0) { toast("復習する単語がありません"); return; }
+  session = { queue: shuffle(pool.map(w => w.id)), index: 0, results: [] };
+  document.getElementById("review-setup").style.display = "none";
+  document.getElementById("review-result").style.display = "none";
+  document.getElementById("review-session").style.display = "";
+  showCard();
+}
+
+function showCard() {
+  const id = session.queue[session.index];
+  const w = words.find(x => x.id === id);
+  if (!w) { answerSkip(); return; }
+
+  document.getElementById("review-progress-text").textContent =
+    `${session.index + 1} / ${session.queue.length} 枚目`;
+  document.getElementById("review-progress-fill").style.width =
+    (session.index / session.queue.length * 100) + "%";
+
+  document.getElementById("fc-word").textContent = w.word;
+  document.getElementById("fc-question").style.display = "";
+  document.getElementById("fc-meaning").style.display = "none";
+  document.getElementById("fc-example").style.display = "none";
+  document.getElementById("review-btns-front").style.display = "";
+  document.getElementById("review-btns-back").style.display = "none";
+}
+
+function revealAnswer() {
+  const id = session.queue[session.index];
+  const w = words.find(x => x.id === id);
+  document.getElementById("fc-question").style.display = "none";
+  const meaningEl = document.getElementById("fc-meaning");
+  meaningEl.textContent = w.meaning;
+  meaningEl.style.display = "";
+  const exampleEl = document.getElementById("fc-example");
+  if (w.example) {
+    exampleEl.textContent = w.example;
+    exampleEl.style.display = "";
+  }
+  document.getElementById("review-btns-front").style.display = "none";
+  document.getElementById("review-btns-back").style.display = "";
+}
+
+function answerCard(ok) {
+  const id = session.queue[session.index];
+  const w = words.find(x => x.id === id);
+  if (w) {
+    if (ok) w.correct++; else w.wrong++;
+    saveWords(words);
+    session.results.push({ word: w.word, ok });
+  }
+  nextCard();
+}
+
+function answerSkip() { nextCard(); }
+
+function nextCard() {
+  session.index++;
+  if (session.index >= session.queue.length) {
+    finishReview();
+  } else {
+    showCard();
+  }
+}
+
+function quitReview() {
+  if (session && session.results.length > 0) {
+    finishReview();
+  } else {
+    resetReviewView();
+  }
+}
+
+function finishReview() {
+  const total = session.results.length;
+  const okCount = session.results.filter(r => r.ok).length;
+  document.getElementById("review-session").style.display = "none";
+  document.getElementById("review-result").style.display = "";
+
+  document.getElementById("result-score").textContent = `${okCount} / ${total}`;
+  const rate = total > 0 ? okCount / total : 0;
+  const msg =
+    rate === 1 ? "全問正解!素晴らしいです。" :
+    rate >= 0.7 ? "いい調子です。忘れていた単語をもう一度確認しましょう。" :
+    "忘れていた単語が多めです。繰り返し復習して定着させましょう。";
+  document.getElementById("result-message").textContent = msg;
+
+  const detail = document.getElementById("result-detail");
+  const misses = session.results.filter(r => !r.ok);
+  if (misses.length > 0) {
+    detail.innerHTML =
+      "<li class='ng'>忘れていた単語:</li>" +
+      misses.map(r => `<li class="ng">❌ ${escapeHtml(r.word)}</li>`).join("");
+  } else {
+    detail.innerHTML = "";
+  }
+  session = null;
+}
+
+/* ---------- 初期化 ---------- */
+resetReviewView();
+</script>
+</body>
+</html>
