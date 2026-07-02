@@ -2,7 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#4f6df5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tango">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
 <title>Tango - 英単語帳</title>
 <style>
   :root {
@@ -51,6 +58,10 @@
     font-size: .9rem;
     cursor: pointer;
     transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
   }
   nav button.active {
     background: var(--primary);
@@ -223,9 +234,42 @@
   }
   .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
-  @media (max-width: 520px) {
+  /* ===== スマホ向けレイアウト:下部タブナビ ===== */
+  @media (max-width: 600px) {
+    header { padding: 12px 16px; justify-content: center; }
+    nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -2px 12px rgba(16, 24, 40, .06);
+      justify-content: space-around;
+      gap: 4px;
+      padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+      z-index: 20;
+    }
+    nav button {
+      flex: 1;
+      flex-direction: column;
+      gap: 2px;
+      border: none;
+      border-radius: 12px;
+      font-size: .7rem;
+      padding: 7px 4px;
+      min-height: 52px;
+      justify-content: center;
+    }
+    nav button .nav-icon { font-size: 1.3rem; line-height: 1; }
+    nav button.active { background: #eef1fe; color: var(--primary); }
+    main { padding: 18px 14px calc(96px + env(safe-area-inset-bottom)); }
+    .btn { min-height: 46px; }
+    .toast { bottom: calc(86px + env(safe-area-inset-bottom)); }
     .word-input-row { flex-direction: column; }
     .flashcard .fc-word { font-size: 1.6rem; }
+    .flashcard { min-height: 220px; padding: 32px 18px; }
+    .review-actions .btn { min-width: 120px; flex: 1; max-width: 200px; }
   }
 </style>
 </head>
@@ -234,9 +278,9 @@
 <header>
   <h1><span class="logo">📖</span>Tango 単語帳</h1>
   <nav>
-    <button id="nav-add" class="active" onclick="showView('add')">単語を追加</button>
-    <button id="nav-list" onclick="showView('list')">単語リスト</button>
-    <button id="nav-review" onclick="showView('review')">復習モード</button>
+    <button id="nav-add" class="active" onclick="showView('add')"><span class="nav-icon">➕</span><span>単語を追加</span></button>
+    <button id="nav-list" onclick="showView('list')"><span class="nav-icon">📋</span><span>単語リスト</span></button>
+    <button id="nav-review" onclick="showView('review')"><span class="nav-icon">🎴</span><span>復習モード</span></button>
   </nav>
 </header>
 
@@ -678,6 +722,11 @@ function finishReview() {
 
 /* ---------- 初期化 ---------- */
 resetReviewView();
+
+/* PWA: https配信時のみService Workerを登録(file://直開きでは不要) */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
 </script>
 </body>
 </html>

@@ -1,9 +1,30 @@
 # Tango 📖 — 英単語帳アプリ
 
 分からない英単語を登録して、フラッシュカード形式で復習できるシンプルな単語帳アプリです。
-ビルド不要・サーバー不要で、`index.html` をブラウザで開くだけで使えます。
+スマホ対応(PWA)で、ホーム画面に追加すればアプリのように使えます。
 
-## 使い方
+## スマホで使う(おすすめ)
+
+GitHub Pages で公開すると、次のURLでアクセスできます。
+
+```
+https://piitann317.github.io/Tango/
+```
+
+1. スマホのブラウザ(Safari / Chrome)で上のURLを開く
+2. **ホーム画面に追加**する
+   - iPhone (Safari): 共有ボタン →「ホーム画面に追加」
+   - Android (Chrome): メニュー(⋮)→「ホーム画面に追加」または「アプリをインストール」
+3. ホーム画面のアイコンから起動すると、全画面のアプリとして使えます
+   (一度読み込めばオフラインでも動作します)
+
+### 公開のしかた(初回のみ)
+
+main ブランチにマージすると GitHub Actions が自動で GitHub Pages にデプロイします。
+もし初回デプロイに失敗する場合は、リポジトリの **Settings → Pages → Source** を
+**GitHub Actions** に設定してから、Actions タブでワークフローを再実行してください。
+
+## パソコンで使う
 
 1. `index.html` をブラウザ(Chrome / Edge / Safari / Firefox)で開く
 2. **単語を追加** タブで英単語を入力
@@ -19,9 +40,12 @@
 ## データの保存について
 
 単語データはブラウザの `localStorage` に保存されます。
-同じブラウザ・同じ端末であれば、閉じても再度開いたときにデータが残っています。
+同じ端末・同じブラウザであれば、閉じても再度開いたときにデータが残っています。
+(端末をまたいだ同期はされません)
 
 ## 技術構成
 
-- HTML / CSS / JavaScript のみ(1ファイル完結、依存ライブラリなし)
+- HTML / CSS / JavaScript のみ(依存ライブラリなし)
+- PWA 対応(`manifest.json` + Service Worker によるオフラインキャッシュ)
 - 辞書検索: [Free Dictionary API](https://dictionaryapi.dev/)(オフライン時は手入力で利用可能)
+- GitHub Actions で GitHub Pages に自動デプロイ(`.github/workflows/pages.yml`)
